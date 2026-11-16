@@ -1,0 +1,6 @@
+---
+import type { Item } from '../utils/content';
+import RelatedContent from './RelatedContent.astro';
+interface Props { items: Item[] }
+---
+<RelatedContent title="Backlinks（引用本文的內容）" items={Astro.props.items} empty="目前沒有其他已發布內容在 related 中引用本文。" />

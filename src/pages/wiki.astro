@@ -1,0 +1,88 @@
+---
+import { getCollection, render } from 'astro:content';
+import BaseLayout from '../layouts/BaseLayout.astro';
+import PageHeader from '../components/PageHeader.astro';
+import { fmtDate } from '../utils/url';
+import EditLinks from '../components/EditLinks.astro';
+import { getItemMap } from '../utils/content';
+
+const itemMap = await getItemMap();
+const docs = await getCollection('wiki', (e) => e.data.status === 'published');
+const byType = (t: string) => docs.filter((d) => d.data.type === t);
+const main = byType('wiki')[0];
+const index = byType('index')[0];
+const sourcesDoc = byType('sources')[0];
+const log = byType('log')[0];
+const sourceRecords = byType('source').sort((a, b) => a.data.title.localeCompare(b.data.title));
+
+const mainR = main ? await render(main) : null;
+const indexR = index ? await render(index) : null;
+const sourcesR = sourcesDoc ? await render(sourcesDoc) : null;
+const logR = log ? await render(log) : null;
+const sourceRendered = await Promise.all(sourceRecords.map(async (s) => ({ s, r: await render(s) })));
+const topics = (mainR?.headings ?? []).filter((h) => h.depth === 2);
+---
+<BaseLayout title="LLM Wiki" description="整理後的知識主題、來源紀錄與更新紀錄。以摘要與連結為主，不複製來源全文。">
+  <PageHeader eyebrow="LLM Wiki" title="整理後的知識庫" lead="Capture → Distill → Connect → Draft → Review → Publish → Maintain。這裡呈現 wiki/ 目錄中整理後的內容：主題、索引、來源與更新紀錄。" />
+
+  <div class="mx-auto max-w-6xl px-5 grid gap-12 lg:grid-cols-[14rem_minmax(0,1fr)]" data-pagefind-body>
+    <nav class="lg:sticky lg:top-24 self-start text-sm" aria-label="Wiki 導覽" data-pagefind-ignore>
+      <p class="eyebrow mb-3">Contents</p>
+      <ul class="space-y-1">
+        <li><a href="#wiki-main" class="no-underline hover:text-accent">核心 Wiki</a></li>
+        {topics.map((t) => <li class="pl-3 border-l border-line"><a href={`#${t.slug}`} class="no-underline text-mute hover:text-accent">{t.text}</a></li>)}
+        <li class="pt-2"><a href="#wiki-index" class="no-underline hover:text-accent">知識索引</a></li>
+        <li><a href="#wiki-sources" class="no-underline hover:text-accent">來源總覽（{sourceRecords.length}）</a></li>
+        <li><a href="#wiki-log" class="no-underline hover:text-accent">更新紀錄</a></li>
+      </ul>
+      <div class="mt-6"><EditLinks path="wiki/llm-wiki.md" label="核心 Wiki" /></div>
+      <p class="mt-3 text-xs text-mute">其他 Wiki 檔案（INDEX、SOURCES、LOG）位於 <code>wiki/</code>，同樣可在 GitHub 編輯。</p>
+    </nav>
+
+    <div class="min-w-0">
+      {!main && <p class="text-mute">尚未建立 <code>wiki/llm-wiki.md</code>。</p>}
+      {mainR && (
+        <section id="wiki-main" aria-labelledby="wiki-main-h">
+          <h2 id="wiki-main-h" class="eyebrow mb-4">Core wiki · 更新 {fmtDate(main!.data.updatedAt)}</h2>
+          <div class="prose prose-lg"><mainR.Content /></div>
+        </section>
+      )}
+
+      {indexR && (
+        <section id="wiki-index" class="mt-20 pt-10 border-t border-ink" aria-labelledby="wiki-index-h">
+          <h2 id="wiki-index-h" class="eyebrow mb-4">Index</h2>
+          <div class="prose"><indexR.Content /></div>
+        </section>
+      )}
+
+      <section id="wiki-sources" class="mt-20 pt-10 border-t border-ink" aria-labelledby="wiki-sources-h">
+        <h2 id="wiki-sources-h" class="eyebrow mb-4">Sources</h2>
+        {sourcesR && <div class="prose mb-8"><sourcesR.Content /></div>}
+        {sourceRendered.length === 0 && <p class="text-mute">尚無來源紀錄。</p>}
+        <ul class="divide-y divide-line border-y border-line">
+          {sourceRendered.map(({ s, r }) => (
+            <li class="py-5" id={`source-${s.id.replace('sources/', '').replace(/[^a-z0-9-]/g, '-')}`}>
+              <p class="font-serif text-lg">
+                {s.data.url ? <a href={s.data.url} rel="noopener" class="text-accent underline underline-offset-2">{s.data.title}</a> : s.data.title}
+              </p>
+              <p class="font-mono text-xs text-mute mt-1">
+                {s.data.organization ?? ''}{s.data.author ? ` · ${s.data.author}` : ''}{s.data.publishedAt ? ` · 發布 ${fmtDate(s.data.publishedAt)}` : ''}{s.data.accessedAt ? ` · 查閱 ${fmtDate(s.data.accessedAt)}` : ''}
+              </p>
+              <div class="prose prose-sm mt-3"><r.Content /></div>
+              {s.data.usedIn.length > 0 && (
+                <p class="mt-2 text-xs text-mute" data-pagefind-ignore>用於：{s.data.usedIn.map((u, i) => <>{itemMap.get(u) ? <a href={itemMap.get(u)!.url}>{itemMap.get(u)!.title}</a> : <span>{u}</span>}{i < s.data.usedIn.length - 1 ? '、' : ''}</>)}</p>
+              )}
+            </li>
+          ))}
+        </ul>
+      </section>
+
+      {logR && (
+        <section id="wiki-log" class="mt-20 pt-10 border-t border-ink" aria-labelledby="wiki-log-h">
+          <h2 id="wiki-log-h" class="eyebrow mb-4">Log</h2>
+          <div class="prose"><logR.Content /></div>
+        </section>
+      )}
+    </div>
+  </div>
+</BaseLayout>

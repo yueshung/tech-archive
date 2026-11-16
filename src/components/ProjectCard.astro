@@ -1,0 +1,21 @@
+---
+import type { Item } from '../utils/content';
+import { fmtDate } from '../utils/url';
+interface Props { item: Item; large?: boolean }
+const { item, large = false } = Astro.props;
+const d = (item.entry as any).data;
+const tech: string[] = d.techStack ?? [];
+const text = [item.title, item.description, ...tech, ...item.tags].join(' ').toLowerCase();
+---
+<a href={item.url} class="card project-card" data-text={text} data-type={d.projectType ?? ''} data-tech={tech.join('|')}>
+  <div class="flex items-center justify-between gap-3">
+    <span class="eyebrow">{d.projectType ?? 'Project'}</span>
+    <span class="font-mono text-xs text-mute">{fmtDate(item.updatedAt)}</span>
+  </div>
+  <h3 class:list={['card-title mt-3', large && '!text-3xl']}>{item.title}</h3>
+  <p class="text-ink-2 mt-3 text-[0.95rem]">{item.description}</p>
+  <div class="flex flex-wrap gap-1.5 mt-4">
+    {tech.slice(0, 6).map((t) => <span class="chip">{t}</span>)}
+    {d.evidenceLevel === 'structure-only' && <span class="chip chip-accent">僅確認目錄結構</span>}
+  </div>
+</a>

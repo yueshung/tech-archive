@@ -1,0 +1,23 @@
+---
+import type { Item } from '../utils/content';
+import { KIND_LABEL } from '../utils/content';
+interface Props { title: string; items: Item[]; empty?: string }
+const { title, items, empty } = Astro.props;
+---
+<section aria-labelledby={`h-${title}`} data-pagefind-ignore>
+  <h2 id={`h-${title}`} class="eyebrow mb-3">{title}</h2>
+  {items.length === 0
+    ? (empty && <p class="text-sm text-mute">{empty}</p>)
+    : (
+      <ul class="divide-y divide-line border-y border-line">
+        {items.map((i) => (
+          <li>
+            <a href={i.url} class="flex items-baseline justify-between gap-4 py-3 no-underline hover:text-accent">
+              <span class="font-serif text-lg leading-snug">{i.title}</span>
+              <span class="font-mono text-[0.7rem] text-mute shrink-0">{KIND_LABEL[i.kind]}</span>
+            </a>
+          </li>
+        ))}
+      </ul>
+    )}
+</section>

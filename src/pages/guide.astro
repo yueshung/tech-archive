@@ -1,0 +1,68 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import PageHeader from '../components/PageHeader.astro';
+import { SITE } from '../data/site';
+
+// 範本直接讀取 templates/，與 Repository 內容保持一致
+const raw = import.meta.glob('../../templates/*.md', { query: '?raw', import: 'default', eager: true }) as Record<string, string>;
+const tpl = (name: string) => raw[`../../templates/${name}.md`] ?? '';
+const kinds = [
+  { key: 'projects', title: 'Project', file: 'project-template', hint: '作品。先確認 Repository 的 README 與目錄，再填寫。' },
+  { key: 'knowledge', title: 'Knowledge', file: 'knowledge-template', hint: '技術文章。引用外部資料請填 sources。' },
+  { key: 'notes', title: 'Note', file: 'note-template', hint: '開發、實驗與學習紀錄。' },
+];
+const newUrl = (k: string) => `${SITE.repoUrl}/new/${SITE.branch}/src/content/${k}?filename=new-${k}-slug.md`;
+---
+<BaseLayout title="新增／編輯內容" description="如何在 GitHub 網頁版新增、修改、刪除與發布 Markdown 內容。">
+  <PageHeader eyebrow="Guide" title="新增與編輯內容" lead="本站沒有 CMS 或登入後台：所有內容都是 GitHub Repository 裡的 Markdown。下面的按鈕只會帶你到 GitHub 的編輯器，實際儲存（Commit）由 GitHub 完成。" />
+  <div class="mx-auto max-w-4xl px-5 space-y-14">
+    <section>
+      <h2 class="display text-2xl font-semibold mb-4">四個動作</h2>
+      <ol class="grid sm:grid-cols-2 gap-x-10 border-t border-ink">
+        <li class="py-4 border-b border-line"><p class="eyebrow">新增</p><p class="text-sm mt-1">複製下方範本 → 在 GitHub 建立 <code>&lt;slug&gt;.md</code> → 貼上並填寫（<code>status</code> 先用 <code>draft</code>）。</p></li>
+        <li class="py-4 border-b border-line"><p class="eyebrow">修改</p><p class="text-sm mt-1">每篇內容右側（手機在文末）有「編輯這個檔案」，會直接開啟該檔案的 GitHub 編輯頁。</p></li>
+        <li class="py-4 border-b border-line"><p class="eyebrow">發布</p><p class="text-sm mt-1">把 <code>status</code> 改為 <code>published</code> 並 Commit 到 <code>{SITE.branch}</code>；Actions 驗證通過後自動部署。</p></li>
+        <li class="py-4 border-b border-line"><p class="eyebrow">刪除／撤回</p><p class="text-sm mt-1">用「刪除」連結，或把 <code>status</code> 改成 <code>draft</code>／<code>archived</code>。Git 歷史仍會保留舊內容。</p></li>
+      </ol>
+      <p class="text-sm text-mute mt-4">需要登入 GitHub 並有寫入權限。草稿與 Git 歷史在 Public Repository 中<strong>不是機密</strong>，請勿放入密碼、Token 或個資。</p>
+    </section>
+
+    {kinds.map((k) => (
+      <section aria-labelledby={`h-${k.key}`}>
+        <div class="flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <h2 id={`h-${k.key}`} class="display text-2xl font-semibold">新增 {k.title}</h2>
+            <p class="text-sm text-ink-2 mt-1">{k.hint}</p>
+          </div>
+          <div class="flex flex-wrap gap-2">
+            <button type="button" class="btn copy-tpl" data-target={`tpl-${k.key}`}>複製範本</button>
+            <a class="btn btn-solid" href={newUrl(k.key)} rel="noopener">在 GitHub 新增 ↗</a>
+          </div>
+        </div>
+        <details class="mt-4 border border-line bg-white">
+          <summary class="cursor-pointer px-4 py-2 text-sm">檢視範本內容</summary>
+          <pre id={`tpl-${k.key}`} class="overflow-x-auto p-4 text-xs leading-relaxed border-t border-line">{tpl(k.file)}</pre>
+        </details>
+      </section>
+    ))}
+
+    <section class="text-sm text-ink-2 border-t border-ink pt-6">
+      <p>上方連結依 <code>src/data/site.ts</code> 的 Repository 與分支設定產生（目前為 <code>{SITE.repoUrl}</code>、分支 <code>{SITE.branch}</code>）。Repository 名稱或分支確認後，請修改該檔案。</p>
+    </section>
+  </div>
+
+  <script>
+    document.querySelectorAll<HTMLButtonElement>('.copy-tpl').forEach((b) =>
+      b.addEventListener('click', async () => {
+        const el = document.getElementById(b.dataset.target!);
+        try {
+          await navigator.clipboard.writeText(el?.textContent ?? '');
+          b.textContent = '已複製 ✓';
+        } catch {
+          b.textContent = '複製失敗，請展開範本手動複製';
+        }
+        setTimeout(() => (b.textContent = '複製範本'), 2000);
+      })
+    );
+  </script>
+</BaseLayout>

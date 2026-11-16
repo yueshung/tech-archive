@@ -1,0 +1,69 @@
+---
+import '../styles/global.css';
+import Header from '../components/Header.astro';
+import Footer from '../components/Footer.astro';
+import { SITE } from '../data/site';
+import { withBase } from '../utils/url';
+
+interface Props {
+  title?: string;
+  description?: string;
+}
+const { title, description = SITE.tagline } = Astro.props;
+const fullTitle = title ? `${title} · ${SITE.name}` : SITE.name;
+const canonical = Astro.site ? new URL(Astro.url.pathname, Astro.site).href : Astro.url.href;
+---
+<!doctype html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{fullTitle}</title>
+    <meta name="description" content={description} />
+    <link rel="canonical" href={canonical} />
+    <link rel="icon" type="image/svg+xml" href={withBase('/favicon.svg')} />
+    <link rel="alternate" type="application/rss+xml" title={SITE.name} href={withBase('/rss.xml')} />
+    <meta property="og:title" content={fullTitle} />
+    <meta property="og:description" content={description} />
+    <meta property="og:type" content="website" />
+    <meta name="theme-color" content="#faf7f2" />
+  </head>
+  <body class="min-h-screen flex flex-col">
+    <a href="#main" class="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-50 focus:bg-ink focus:text-paper focus:px-3 focus:py-2">跳到主要內容</a>
+    <Header />
+    <main id="main" class="flex-1">
+      <slot />
+    </main>
+    <Footer />
+    <script>
+      // 行動版選單
+      const btn = document.getElementById('menu-toggle');
+      const panel = document.getElementById('mobile-nav');
+      btn?.addEventListener('click', () => {
+        const open = btn.getAttribute('aria-expanded') === 'true';
+        btn.setAttribute('aria-expanded', String(!open));
+        panel?.classList.toggle('hidden', open);
+      });
+
+      // 程式碼複製
+      document.querySelectorAll<HTMLPreElement>('.prose pre').forEach((pre) => {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'copy-btn';
+        b.textContent = 'Copy';
+        b.setAttribute('aria-label', '複製程式碼');
+        b.addEventListener('click', async () => {
+          const text = pre.querySelector('code')?.textContent ?? pre.textContent ?? '';
+          try {
+            await navigator.clipboard.writeText(text);
+            b.textContent = 'Copied';
+          } catch {
+            b.textContent = 'Failed';
+          }
+          setTimeout(() => (b.textContent = 'Copy'), 1600);
+        });
+        pre.appendChild(b);
+      });
+    </script>
+  </body>
+</html>

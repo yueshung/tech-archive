@@ -1,0 +1,15 @@
+---
+import { SITE } from '../data/site';
+interface Props { path: string; label?: string }
+const { path, label = '這個檔案' } = Astro.props;
+const at = (action: string) => `${SITE.repoUrl}/${action}/${SITE.branch}/${path}`;
+---
+<div class="border border-line bg-white p-4 text-sm" data-pagefind-ignore>
+  <p class="eyebrow mb-2">Edit on GitHub</p>
+  <ul class="space-y-1">
+    <li><a href={at('edit')} rel="noopener" class="text-accent underline underline-offset-2">✎ 編輯{label}</a></li>
+    <li><a href={`${SITE.repoUrl}/commits/${SITE.branch}/${path}`} rel="noopener" class="underline underline-offset-2">⟲ 修改紀錄</a></li>
+    <li><a href={at('delete')} rel="noopener" class="underline underline-offset-2">🗑 刪除{label}</a></li>
+  </ul>
+  <p class="text-xs text-mute mt-3">需登入 GitHub 且有此 Repository 的寫入權限。修改後 Commit 到 {SITE.branch}，Actions 會自動驗證並部署。</p>
+</div>

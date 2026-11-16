@@ -1,0 +1,15 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { withBase } from '../utils/url';
+---
+<BaseLayout title="找不到頁面">
+  <section class="mx-auto max-w-3xl px-5 py-28 text-center">
+    <p class="eyebrow">404</p>
+    <h1 class="display text-5xl font-semibold mt-4">找不到這個頁面</h1>
+    <p class="text-ink-2 mt-5">內容可能尚未發布、已封存，或連結有誤。</p>
+    <div class="flex justify-center gap-3 mt-8">
+      <a class="btn btn-solid" href={withBase('/')}>回首頁</a>
+      <a class="btn" href={withBase('/search/')}>搜尋</a>
+    </div>
+  </section>
+</BaseLayout>

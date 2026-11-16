@@ -1,0 +1,44 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import PageHeader from '../../components/PageHeader.astro';
+import ProjectCard from '../../components/ProjectCard.astro';
+import ListFilter from '../../components/ListFilter.astro';
+import { getItems, countBy } from '../../utils/content';
+
+const projects = await getItems('projects');
+const sorted = [...projects].sort((a, b) => Number((b.entry.data as any).featured) - Number((a.entry.data as any).featured) || b.updatedAt.getTime() - a.updatedAt.getTime());
+const types = countBy(projects.map((p) => (p.entry.data as any).projectType).filter(Boolean));
+const techs = countBy(projects.flatMap((p) => (p.entry.data as any).techStack as string[])).slice(0, 16);
+---
+<BaseLayout title="Projects" description="整理自 GitHub 公開 Repository 的作品：目標、技術棧、可驗證功能與個人負責範圍。">
+  <PageHeader eyebrow="Projects" title="作品與實作紀錄" lead="每個作品都區分三件事：Repository 可驗證的事實、技術實作觀察，以及你個人實際負責的範圍。無法確認的部分會標示「待使用者確認」。" />
+  <div class="mx-auto max-w-6xl px-5" data-filter-root>
+    <div class="grid gap-4 border-y border-line py-5">
+      <label class="block">
+        <span class="eyebrow">搜尋作品</span>
+        <input data-filter-q type="search" class="field mt-1" placeholder="名稱、技術、標籤…" />
+      </label>
+      {types.length > 0 && (
+        <div class="flex flex-wrap items-center gap-2"><span class="eyebrow mr-2">類型</span>
+          {types.map(([t]) => <button type="button" class="chip" data-group="type" data-value={t} aria-pressed="false">{t}</button>)}
+        </div>
+      )}
+      {techs.length > 0 && (
+        <div class="flex flex-wrap items-center gap-2"><span class="eyebrow mr-2">技術</span>
+          {techs.map(([t]) => <button type="button" class="chip" data-group="tech" data-value={t} aria-pressed="false">{t}</button>)}
+        </div>
+      )}
+      <div class="flex items-center justify-between text-sm text-mute">
+        <p aria-live="polite">顯示 <span data-count>{projects.length}</span> / {projects.length} 個作品</p>
+        <button type="button" class="chip" data-reset hidden>清除篩選</button>
+      </div>
+    </div>
+
+    {projects.length === 0 && <p class="py-16 text-mute">目前沒有已發布的作品。請在 <code>src/content/projects/</code> 新增 Markdown 並將 <code>status</code> 設為 <code>published</code>。</p>}
+    <div class="grid gap-x-10 md:grid-cols-2 mt-6">
+      {sorted.map((p) => <ProjectCard item={p} />)}
+    </div>
+    <p data-empty hidden class="py-16 text-mute">沒有符合條件的作品，請調整搜尋或清除篩選。</p>
+  </div>
+  <ListFilter />
+</BaseLayout>

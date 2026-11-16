@@ -1,0 +1,60 @@
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches: [main]        # 正式部署分支；若你的分支不是 main，請修改這裡
+  workflow_dispatch:
+
+# 最小必要權限（Astro 官方部署文件）
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Require lockfile
+        run: |
+          if [ ! -f package-lock.json ]; then
+            echo "::error::找不到 package-lock.json。請在本機執行 npm install，並將 package-lock.json 一併提交。"
+            exit 1
+          fi
+
+      - name: Compute site and base path
+        run: |
+          REPO="${GITHUB_REPOSITORY#*/}"
+          OWNER="$(echo "${GITHUB_REPOSITORY_OWNER}" | tr '[:upper:]' '[:lower:]')"
+          if [ "$REPO" = "${OWNER}.github.io" ]; then
+            echo "BASE_PATH=/" >> "$GITHUB_ENV"          # User/Organization Pages：不需要 base
+          else
+            echo "BASE_PATH=/${REPO}" >> "$GITHUB_ENV"   # Repository Pages：base 為 /<repo>
+          fi
+          echo "SITE_URL=https://${OWNER}.github.io" >> "$GITHUB_ENV"
+          # 若使用自訂網域：請改成 SITE_URL=https://你的網域、BASE_PATH=/，並新增 public/CNAME
+
+      # 預設執行 npm run build：內容驗證 → 連結檢查 → astro build → Pagefind → 建置輸出檢查
+      # 任何一步失敗都會讓 workflow 失敗，不會進入 deploy job
+      - name: Install, build, and upload site
+        uses: withastro/action@v6
+        with:
+          node-version: 22
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v5

@@ -1,0 +1,30 @@
+{
+  "name": "tech-archive",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22.12.0"
+  },
+  "scripts": {
+    "dev": "astro dev",
+    "validate": "node scripts/validate-content.mjs",
+    "check-links": "node scripts/check-links.mjs",
+    "generate-index": "node scripts/generate-index.mjs",
+    "typecheck": "astro check",
+    "build": "npm run validate && npm run check-links && astro build && pagefind --site dist && node scripts/check-dist.mjs",
+    "preview": "astro preview",
+    "check-dist": "node scripts/check-dist.mjs"
+  },
+  "dependencies": {
+    "@tailwindcss/typography": "^0.5.16",
+    "@tailwindcss/vite": "^4.1.0",
+    "astro": "^6.0.0",
+    "pagefind": "^1.4.0",
+    "tailwindcss": "^4.1.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.0",
+    "vite": "^7.3.2"
+  }
+}

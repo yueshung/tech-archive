@@ -1,0 +1,182 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import PageHeader from '../components/PageHeader.astro';
+import { getItems, buildGraph, KIND_LABEL } from '../utils/content';
+
+const items = await getItems();
+const graph = buildGraph(items);
+const titleOf = new Map(graph.nodes.map((n) => [n.id, n]));
+const json = JSON.stringify(graph).replace(/</g, '\\u003c');
+---
+<BaseLayout title="Knowledge Graph" description="Projects、Knowledge 與 Notes 之間由 related 欄位明確定義的關聯網絡。">
+  <PageHeader eyebrow="Knowledge Graph" title="知識關聯圖" lead="節點只來自已發布內容，連線只來自 Markdown 中明確寫下的 related 欄位，不做任何推測。點擊節點開啟內容，拖曳可調整位置。" />
+  <div class="mx-auto max-w-6xl px-5">
+    {graph.nodes.length === 0 ? (
+      <p class="py-16 text-mute">目前沒有已發布內容，因此沒有可顯示的圖。</p>
+    ) : (
+      <>
+        <div class="flex flex-wrap items-center gap-2 mb-4" role="group" aria-label="依類型顯示">
+          <span class="eyebrow mr-2">顯示</span>
+          <button type="button" class="chip" data-kind="projects" aria-pressed="true">● Projects</button>
+          <button type="button" class="chip" data-kind="knowledge" aria-pressed="true">● Knowledge</button>
+          <button type="button" class="chip" data-kind="notes" aria-pressed="true">● Notes</button>
+          <button type="button" class="chip ml-auto" id="graph-reset">重新排列</button>
+        </div>
+        <div class="grid gap-6 lg:grid-cols-[1fr_17rem]">
+          <div class="graph-wrap">
+            <svg id="graph-svg" viewBox="0 0 900 580" role="img" aria-label="Knowledge Graph 節點關聯圖" class="w-full h-auto"></svg>
+          </div>
+          <aside class="border border-line bg-white p-5 text-sm self-start" aria-live="polite">
+            <p class="eyebrow mb-2">Node</p>
+            <p id="graph-info" class="text-ink-2">將滑鼠移到節點，或用 Tab 鍵聚焦節點，以查看說明與連結數。</p>
+            <hr class="my-4 border-line" />
+            <p class="text-mute">{graph.nodes.length} 個節點 · {graph.edges.length} 條關聯。沒有連線的節點會獨立顯示。</p>
+          </aside>
+        </div>
+        <script id="graph-data" type="application/json" is:inline set:html={json}></script>
+
+        <section class="mt-14" aria-labelledby="edges-h">
+          <h2 id="edges-h" class="eyebrow mb-3">關聯清單（無 JavaScript 時也可閱讀）</h2>
+          {graph.edges.length === 0 ? (
+            <p class="text-sm text-mute">目前沒有任何 related 關聯。</p>
+          ) : (
+            <ul class="divide-y divide-line border-y border-line text-sm">
+              {graph.edges.map((e) => {
+                const a = titleOf.get(e.source)!;
+                const b = titleOf.get(e.target)!;
+                return (
+                  <li class="py-2 flex flex-wrap gap-x-3">
+                    <a href={a.url}>{a.title}</a><span class="text-mute font-mono text-xs">{KIND_LABEL[a.kind]} ↔ {KIND_LABEL[b.kind]}</span><a href={b.url}>{b.title}</a>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </section>
+      </>
+    )}
+  </div>
+
+  <script>
+    type N = { id: string; title: string; kind: string; url: string; description: string; degree: number; x: number; y: number; vx: number; vy: number; r: number };
+    const dataEl = document.getElementById('graph-data');
+    const svg = document.getElementById('graph-svg') as unknown as SVGSVGElement | null;
+    if (dataEl && svg) {
+      const W = 900, H = 580;
+      const NS = 'http://www.w3.org/2000/svg';
+      const data = JSON.parse(dataEl.textContent || '{"nodes":[],"edges":[]}');
+      const color: Record<string, string> = { projects: '#b8440f', knowledge: '#14110f', notes: '#8a8277' };
+      const label: Record<string, string> = { projects: 'Project', knowledge: 'Knowledge', notes: 'Note' };
+      const nodes: N[] = data.nodes.map((n: any) => ({ ...n, x: 0, y: 0, vx: 0, vy: 0, r: 7 + Math.min(n.degree, 8) * 1.6 }));
+      const byId = new Map(nodes.map((n) => [n.id, n]));
+      const edges = data.edges.map((e: any) => ({ a: byId.get(e.source)!, b: byId.get(e.target)! })).filter((e: any) => e.a && e.b);
+      const info = document.getElementById('graph-info')!;
+      const visible = new Set(['projects', 'knowledge', 'notes']);
+
+      function layout() {
+        nodes.forEach((n, i) => {
+          const ang = (i / nodes.length) * Math.PI * 2;
+          n.x = W / 2 + Math.cos(ang) * 240; n.y = H / 2 + Math.sin(ang) * 190; n.vx = n.vy = 0;
+        });
+        for (let it = 0; it < 320; it++) {
+          const cool = 1 - it / 320;
+          for (let i = 0; i < nodes.length; i++) for (let j = i + 1; j < nodes.length; j++) {
+            const a = nodes[i], b = nodes[j];
+            let dx = a.x - b.x, dy = a.y - b.y; let d2 = dx * dx + dy * dy || 0.01;
+            const f = 2600 / d2; const d = Math.sqrt(d2); dx /= d; dy /= d;
+            a.vx += dx * f; a.vy += dy * f; b.vx -= dx * f; b.vy -= dy * f;
+          }
+          for (const e of edges) {
+            const dx = e.b.x - e.a.x, dy = e.b.y - e.a.y; const d = Math.sqrt(dx * dx + dy * dy) || 1;
+            const f = (d - 110) * 0.02;
+            e.a.vx += (dx / d) * f; e.a.vy += (dy / d) * f; e.b.vx -= (dx / d) * f; e.b.vy -= (dy / d) * f;
+          }
+          for (const n of nodes) {
+            n.vx += (W / 2 - n.x) * 0.004; n.vy += (H / 2 - n.y) * 0.004;
+            n.x += Math.max(-12, Math.min(12, n.vx)) * cool; n.y += Math.max(-12, Math.min(12, n.vy)) * cool;
+            n.vx *= 0.82; n.vy *= 0.82;
+            n.x = Math.max(40, Math.min(W - 40, n.x)); n.y = Math.max(30, Math.min(H - 30, n.y));
+          }
+        }
+      }
+
+      const edgeEls = edges.map(() => { const l = document.createElementNS(NS, 'line'); l.setAttribute('class', 'graph-edge'); svg.appendChild(l); return l; });
+      const nodeEls = nodes.map((n) => {
+        const g = document.createElementNS(NS, 'a');
+        g.setAttribute('href', n.url);
+        g.setAttribute('class', 'graph-node');
+        g.setAttribute('aria-label', `${label[n.kind]}：${n.title}`);
+        const c = document.createElementNS(NS, 'circle');
+        c.setAttribute('r', String(n.r)); c.setAttribute('fill', color[n.kind] || '#444');
+        c.setAttribute('stroke', '#fff'); c.setAttribute('stroke-width', '2');
+        const t = document.createElementNS(NS, 'text');
+        t.setAttribute('dy', String(n.r + 13)); t.setAttribute('text-anchor', 'middle');
+        t.textContent = n.title.length > 16 ? n.title.slice(0, 15) + '…' : n.title;
+        g.append(c, t); svg.appendChild(g);
+        return g;
+      });
+
+      function draw() {
+        edges.forEach((e: any, i: number) => {
+          const l = edgeEls[i];
+          l.setAttribute('x1', String(e.a.x)); l.setAttribute('y1', String(e.a.y));
+          l.setAttribute('x2', String(e.b.x)); l.setAttribute('y2', String(e.b.y));
+          const show = visible.has(e.a.kind) && visible.has(e.b.kind);
+          l.style.display = show ? '' : 'none';
+        });
+        nodes.forEach((n, i) => {
+          nodeEls[i].setAttribute('transform', `translate(${n.x},${n.y})`);
+          (nodeEls[i] as unknown as HTMLElement).style.display = visible.has(n.kind) ? '' : 'none';
+        });
+      }
+
+      function focus(n: N | null) {
+        const nb = new Set<string>();
+        if (n) { nb.add(n.id); edges.forEach((e: any) => { if (e.a === n) nb.add(e.b.id); if (e.b === n) nb.add(e.a.id); }); }
+        nodes.forEach((m, i) => nodeEls[i].classList.toggle('dim', !!n && !nb.has(m.id)));
+        edges.forEach((e: any, i: number) => {
+          const on = !!n && (e.a === n || e.b === n);
+          edgeEls[i].classList.toggle('hl', on);
+          edgeEls[i].classList.toggle('dim', !!n && !on);
+        });
+        if (n) {
+          info.textContent = '';
+          const strong = document.createElement('strong'); strong.textContent = n.title;
+          const p = document.createElement('span'); p.className = 'block mt-1'; p.textContent = n.description;
+          const m = document.createElement('span'); m.className = 'block mt-2 font-mono text-xs text-mute'; m.textContent = `${label[n.kind]} · ${n.degree} 條關聯`;
+          info.append(strong, p, m);
+        }
+      }
+
+      nodes.forEach((n, i) => {
+        const el = nodeEls[i];
+        el.addEventListener('mouseenter', () => focus(n));
+        el.addEventListener('focus', () => focus(n));
+        el.addEventListener('mouseleave', () => focus(null));
+        el.addEventListener('blur', () => focus(null));
+        let drag = false, moved = false, sx = 0, sy = 0;
+        const pt = (ev: PointerEvent) => { const r = svg.getBoundingClientRect(); return { x: ((ev.clientX - r.left) / r.width) * W, y: ((ev.clientY - r.top) / r.height) * H }; };
+        el.addEventListener('pointerdown', (ev: any) => { drag = true; moved = false; const p = pt(ev); sx = p.x; sy = p.y; (el as any).setPointerCapture?.(ev.pointerId); });
+        el.addEventListener('pointermove', (ev: any) => {
+          if (!drag) return; const p = pt(ev);
+          if (Math.hypot(p.x - sx, p.y - sy) > 4) moved = true;
+          if (moved) { n.x = Math.max(20, Math.min(W - 20, p.x)); n.y = Math.max(20, Math.min(H - 20, p.y)); draw(); }
+        });
+        el.addEventListener('pointerup', () => { drag = false; });
+        el.addEventListener('click', (ev) => { if (moved) { ev.preventDefault(); moved = false; } });
+      });
+
+      document.querySelectorAll<HTMLButtonElement>('button[data-kind]').forEach((b) =>
+        b.addEventListener('click', () => {
+          const k = b.dataset.kind!;
+          if (visible.has(k)) visible.delete(k); else visible.add(k);
+          b.setAttribute('aria-pressed', String(visible.has(k)));
+          draw();
+        })
+      );
+      document.getElementById('graph-reset')?.addEventListener('click', () => { layout(); draw(); });
+
+      layout(); draw();
+    }
+  </script>
+</BaseLayout>

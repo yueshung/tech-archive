@@ -1,0 +1,91 @@
+---
+import Breadcrumbs from './Breadcrumbs.astro';
+import TableOfContents from './TableOfContents.astro';
+import RelatedContent from './RelatedContent.astro';
+import Backlinks from './Backlinks.astro';
+import SourceList from './SourceList.astro';
+import Tag from './Tag.astro';
+import EditLinks from './EditLinks.astro';
+import type { MarkdownHeading } from 'astro';
+import { KIND_LABEL, getBacklinks, resolveRelated, type Item } from '../utils/content';
+import { fmtDate, withBase } from '../utils/url';
+
+interface Props { item: Item; headings: MarkdownHeading[]; all: Item[] }
+const { item, headings, all } = Astro.props;
+const d = item.entry.data as any;
+const map = new Map(all.map((i) => [i.slug, i]));
+const related = resolveRelated(item, map);
+const backlinks = getBacklinks(item.slug, all);
+const sameKind = all.filter((i) => i.kind === item.kind).sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
+const idx = sameKind.findIndex((i) => i.slug === item.slug);
+const prev = idx > 0 ? sameKind[idx - 1] : undefined;
+const next = idx >= 0 && idx < sameKind.length - 1 ? sameKind[idx + 1] : undefined;
+const isProject = item.kind === 'projects';
+const sectionPath = `/${item.kind}/`;
+const srcPath = `src/content/${item.kind}/${item.slug}.md`;
+---
+<div class="mx-auto max-w-6xl px-5 pt-10 pb-6">
+  <Breadcrumbs items={[{ label: 'Home', href: withBase('/') }, { label: KIND_LABEL[item.kind] + 's', href: withBase(sectionPath) }, { label: item.title }]} />
+</div>
+
+<div class="mx-auto max-w-6xl px-5 grid gap-12 lg:grid-cols-[minmax(0,1fr)_16rem]">
+  <article data-pagefind-body>
+    <header class="pb-8 border-b border-ink">
+      <p class="eyebrow"><span data-pagefind-meta="kind">{KIND_LABEL[item.kind]}</span>{item.category ? ` · ${item.category}` : ''}</p>
+      <h1 class="display text-4xl sm:text-5xl font-semibold mt-3" data-pagefind-meta="title">{item.title}</h1>
+      <p class="text-lg text-ink-2 mt-5 max-w-2xl">{item.description}</p>
+      <p class="font-mono text-xs text-mute mt-5">建立 {fmtDate(item.createdAt)} · 更新 {fmtDate(item.updatedAt)}</p>
+      {item.tags.length > 0 && (
+        <div class="flex flex-wrap gap-1.5 mt-4" data-pagefind-ignore>
+          {item.tags.map((t) => <Tag tag={t} />)}
+        </div>
+      )}
+    </header>
+
+    {isProject && (
+      <aside class="my-8 grid gap-6 sm:grid-cols-2 border border-line bg-white p-6 text-sm" data-pagefind-ignore aria-label="專案資訊">
+        <div>
+          <p class="eyebrow mb-1">類型</p>
+          <p>{d.projectType ?? <span class="todo">待使用者確認</span>}</p>
+        </div>
+        <div>
+          <p class="eyebrow mb-1">個人負責範圍</p>
+          <p>{d.role ?? <span class="todo">待使用者確認</span>}</p>
+        </div>
+        <div class="sm:col-span-2">
+          <p class="eyebrow mb-2">技術棧</p>
+          {d.techStack.length > 0
+            ? <div class="flex flex-wrap gap-1.5">{d.techStack.map((t: string) => <span class="chip">{t}</span>)}</div>
+            : <span class="todo">待補充</span>}
+        </div>
+        <div class="sm:col-span-2 flex flex-wrap gap-3">
+          {d.githubUrl && <a class="btn btn-solid" href={d.githubUrl} rel="noopener">GitHub Repository ↗</a>}
+          {d.demoUrl && <a class="btn" href={d.demoUrl} rel="noopener">Live Demo ↗</a>}
+          {!d.demoUrl && <span class="text-mute self-center">Demo：尚未確認可公開的連結</span>}
+        </div>
+        {d.evidenceLevel === 'structure-only' && (
+          <p class="sm:col-span-2 text-ink-2"><strong>資料完整度：</strong>此 Repository 沒有 README，目前僅能確認公開的目錄結構。功能、技術細節與個人負責範圍待你補充後才會擴寫。</p>
+        )}
+      </aside>
+    )}
+
+    <div class="prose prose-lg mt-8"><slot /></div>
+
+    <div class="mt-14 space-y-10">
+      <SourceList sources={item.sources} />
+      <RelatedContent title="Related（相關內容）" items={related} empty="尚未設定 related。" />
+      <Backlinks items={backlinks} />
+    </div>
+
+    <div class="mt-10 lg:hidden"><EditLinks path={srcPath} /></div>
+
+    <nav class="mt-14 grid sm:grid-cols-2 gap-4 border-t border-ink pt-6" aria-label="上一篇與下一篇" data-pagefind-ignore>
+      {prev ? <a href={prev.url} class="no-underline group"><span class="eyebrow">← 上一篇</span><span class="block font-serif text-lg group-hover:text-accent">{prev.title}</span></a> : <span></span>}
+      {next ? <a href={next.url} class="no-underline group sm:text-right"><span class="eyebrow">下一篇 →</span><span class="block font-serif text-lg group-hover:text-accent">{next.title}</span></a> : <span></span>}
+    </nav>
+  </article>
+
+  <div class="hidden lg:block">
+    <div class="sticky top-24 space-y-8"><TableOfContents headings={headings} /><EditLinks path={srcPath} /></div>
+  </div>
+</div>

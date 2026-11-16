@@ -1,0 +1,21 @@
+---
+import type { Item } from '../utils/content';
+import { KIND_LABEL } from '../utils/content';
+import { fmtDate } from '../utils/url';
+interface Props { item: Item; showKind?: boolean }
+const { item, showKind = false } = Astro.props;
+const text = [item.title, item.description, item.category ?? '', ...item.tags].join(' ').toLowerCase();
+---
+<a href={item.url} class="card article-card" data-text={text} data-category={item.category ?? ''} data-tags={item.tags.join('|')}>
+  <div class="flex items-center justify-between gap-3">
+    <span class="eyebrow">{showKind ? KIND_LABEL[item.kind] : (item.category ?? '')}{showKind && item.category ? ` · ${item.category}` : ''}</span>
+    <span class="font-mono text-xs text-mute">{fmtDate(item.updatedAt)}</span>
+  </div>
+  <h3 class="card-title mt-3">{item.title}</h3>
+  <p class="text-ink-2 mt-2 text-[0.95rem]">{item.description}</p>
+  {item.tags.length > 0 && (
+    <div class="flex flex-wrap gap-1.5 mt-3">
+      {item.tags.slice(0, 5).map((t) => <span class="chip">#{t}</span>)}
+    </div>
+  )}
+</a>

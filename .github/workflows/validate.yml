@@ -1,0 +1,40 @@
+name: Validate content
+
+# Pull Request 與非正式分支：只驗證與建置，不部署
+on:
+  pull_request:
+  push:
+    branches-ignore: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Require lockfile
+        run: |
+          [ -f package-lock.json ] || { echo "::error::找不到 package-lock.json，請提交 lockfile"; exit 1; }
+
+      - name: Install
+        run: npm ci
+
+      - name: Validate content (schema, slug, related, secrets)
+        run: npm run validate
+
+      - name: Check internal links
+        run: npm run check-links
+
+      - name: Build (Astro + Pagefind + dist checks)
+        env:
+          BASE_PATH: /${{ github.event.repository.name }}
+          SITE_URL: https://${{ github.repository_owner }}.github.io
+        run: npm run build

@@ -1,0 +1,42 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import PageHeader from '../components/PageHeader.astro';
+import { getItems, countBy } from '../utils/content';
+import { SITE } from '../data/site';
+import { withBase } from '../utils/url';
+
+const projects = await getItems('projects');
+const techs = countBy(projects.flatMap((p) => (p.entry.data as any).techStack as string[]));
+---
+<BaseLayout title="About" description="個人介紹、技術興趣與 GitHub 個人頁。">
+  <PageHeader eyebrow="About" title="關於這個知識庫" />
+  <div class="mx-auto max-w-6xl px-5 grid gap-14 md:grid-cols-[1fr_20rem]" data-pagefind-body>
+    <div class="prose prose-lg">
+      <h2>個人介紹</h2>
+      <p>GitHub 帳號為 <a href={SITE.githubProfile} rel="noopener">@{SITE.owner}</a>（顯示名稱「yue」）。</p>
+      <p><span class="todo">待補充：個人簡介（學歷／工作背景／聯絡方式由你自行決定是否公開）。此段刻意留白，避免寫入未經確認的個人資料。</span></p>
+
+      <h2>技術興趣與熟悉工具</h2>
+      <p>以下僅依公開 Repository 的語言標示與 README 整理，不代表熟練度評級：</p>
+      <ul>
+        <li>Flutter / Dart — 見 <a href={withBase('/projects/playtaiwan-front/')}>PlayTaiwan-front</a></li>
+        <li>HTML / CSS / 原生 JavaScript — 見 <a href={withBase('/projects/taica-puzzle-solving/')}>懸疑推理社 MYSTERY FILES</a></li>
+        <li>JavaScript / PHP — 見 <a href={withBase('/projects/mapmusic/')}>MapMusic</a>（僅確認目錄結構）</li>
+        <li>另有 Vue（sexy-front）與 Python（Postpartum-Depression-Menu）兩個公開 Repository，<span class="todo">尚未納入整理</span></li>
+      </ul>
+      <p><span class="todo">待補充：你自己認定的熟悉工具與技術興趣。</span></p>
+
+      <h2>學習方向</h2>
+      <p><span class="todo">待補充：目前想深入的主題。</span></p>
+
+      <h2>這個網站如何運作</h2>
+      <p>內容全部是 GitHub Repository 中的 Markdown，沒有 CMS 與登入後台。新增或修改文章後，GitHub Actions 會驗證並部署；只有 <code>status: published</code> 的內容會出現在網站。新增與編輯方式見 <a href={withBase('/guide/')}>新增／編輯內容</a>；細節見 <a href={withBase('/wiki/')}>LLM Wiki</a> 與 Repository 的 <code>README.md</code>。</p>
+    </div>
+    <aside class="self-start border border-line bg-white p-6 text-sm" data-pagefind-ignore>
+      <p class="eyebrow mb-3">GitHub</p>
+      <a class="btn btn-solid w-full justify-center" href={SITE.githubProfile} rel="noopener">github.com/{SITE.owner} ↗</a>
+      <p class="eyebrow mt-8 mb-3">作品中出現的技術</p>
+      <div class="flex flex-wrap gap-1.5">{techs.map(([t]) => <span class="chip">{t}</span>)}</div>
+    </aside>
+  </div>
+</BaseLayout>

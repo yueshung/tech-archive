@@ -1,0 +1,33 @@
+---
+import { SITE } from '../data/site';
+import { withBase } from '../utils/url';
+---
+<footer class="border-t border-ink mt-24 bg-paper-2" data-pagefind-ignore>
+  <div class="mx-auto max-w-6xl px-5 py-12 grid gap-10 md:grid-cols-3 text-sm">
+    <div>
+      <p class="display text-xl font-semibold">TECH ARCHIVE</p>
+      <p class="text-mute mt-2 max-w-xs">以 Markdown 為核心的個人開發作品集與技術知識庫。內容皆可追溯至來源或公開 Repository。</p>
+    </div>
+    <nav aria-label="頁尾導覽">
+      <p class="eyebrow mb-3">Sections</p>
+      <ul class="space-y-1">
+        <li><a href={withBase('/projects/')}>Projects</a></li>
+        <li><a href={withBase('/knowledge/')}>Knowledge</a></li>
+        <li><a href={withBase('/notes/')}>Notes</a></li>
+        <li><a href={withBase('/graph/')}>Knowledge Graph</a></li>
+        <li><a href={withBase('/wiki/')}>LLM Wiki</a></li>
+        <li><a href={withBase('/tags/')}>Tags</a></li>
+      </ul>
+    </nav>
+    <div>
+      <p class="eyebrow mb-3">Elsewhere</p>
+      <ul class="space-y-1">
+        <li><a href={SITE.githubProfile} rel="noopener">GitHub · {SITE.owner}</a></li>
+        <li><a href={withBase('/rss.xml')}>RSS</a></li>
+        <li><a href={withBase('/sitemap.xml')}>Sitemap</a></li>
+        <li><a href={withBase('/about/')}>About</a></li>
+        <li><a href={withBase('/guide/')}>新增／編輯內容</a></li>
+      </ul>
+    </div>
+  </div>
+</footer>

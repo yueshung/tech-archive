@@ -1,0 +1,6 @@
+---
+import { withBase } from '../utils/url';
+interface Props { tag: string; count?: number }
+const { tag, count } = Astro.props;
+---
+<a class="chip" href={withBase(`/tags/${tag}/`)}>#{tag}{count !== undefined && <span class="text-mute">{count}</span>}</a>

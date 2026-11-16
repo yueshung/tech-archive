@@ -1,0 +1,24 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import PageHeader from '../../components/PageHeader.astro';
+import Tag from '../../components/Tag.astro';
+import { getItems, allTags, allCategories } from '../../utils/content';
+const items = await getItems();
+const tags = allTags(items);
+const cats = allCategories(items);
+---
+<BaseLayout title="Tags" description="所有標籤與分類。">
+  <PageHeader eyebrow="Tags" title="標籤與分類" lead="只統計已發布內容。" />
+  <div class="mx-auto max-w-6xl px-5 grid gap-12 md:grid-cols-2">
+    <section>
+      <h2 class="eyebrow mb-4">標籤（{tags.length}）</h2>
+      <div class="flex flex-wrap gap-2">{tags.map(([t, n]) => <Tag tag={t} count={n} />)}</div>
+    </section>
+    <section>
+      <h2 class="eyebrow mb-4">分類（{cats.length}）</h2>
+      <ul class="divide-y divide-line border-y border-line">
+        {cats.map(([c, n]) => <li class="flex justify-between py-2"><span>{c}</span><span class="font-mono text-xs text-mute">{n}</span></li>)}
+      </ul>
+    </section>
+  </div>
+</BaseLayout>

@@ -1,0 +1,57 @@
+---
+// 通用列表篩選：搜尋框 + 分組按鈕（category / tags / type / tech）。
+// 卡片需具備 data-text 與對應 data-* 屬性；支援 URL 參數預設篩選（?tags=astro&category=...）。
+---
+<script>
+  const root = document.querySelector<HTMLElement>('[data-filter-root]');
+  if (root) {
+    const q = root.querySelector<HTMLInputElement>('[data-filter-q]');
+    const items = Array.from(root.querySelectorAll<HTMLElement>('[data-text]'));
+    const buttons = Array.from(root.querySelectorAll<HTMLButtonElement>('button[data-group]'));
+    const empty = root.querySelector<HTMLElement>('[data-empty]');
+    const count = root.querySelector<HTMLElement>('[data-count]');
+    const reset = root.querySelector<HTMLButtonElement>('[data-reset]');
+    const state: Record<string, string> = {};
+
+    const params = new URLSearchParams(location.search);
+    if (q && params.get('q')) q.value = params.get('q')!;
+    buttons.forEach((b) => {
+      const g = b.dataset.group!;
+      if (params.get(g) && params.get(g) === b.dataset.value) state[g] = b.dataset.value!;
+    });
+
+    const apply = () => {
+      const term = (q?.value ?? '').trim().toLowerCase();
+      let shown = 0;
+      for (const el of items) {
+        let ok = !term || (el.dataset.text ?? '').includes(term);
+        for (const [g, v] of Object.entries(state)) {
+          const vals = (el.dataset[g] ?? '').split('|');
+          if (!vals.includes(v)) ok = false;
+        }
+        el.hidden = !ok;
+        if (ok) shown++;
+      }
+      buttons.forEach((b) => b.setAttribute('aria-pressed', String(state[b.dataset.group!] === b.dataset.value)));
+      if (empty) empty.hidden = shown !== 0;
+      if (count) count.textContent = String(shown);
+      if (reset) reset.hidden = !term && Object.keys(state).length === 0;
+    };
+
+    q?.addEventListener('input', apply);
+    buttons.forEach((b) =>
+      b.addEventListener('click', () => {
+        const g = b.dataset.group!;
+        if (state[g] === b.dataset.value) delete state[g];
+        else state[g] = b.dataset.value!;
+        apply();
+      })
+    );
+    reset?.addEventListener('click', () => {
+      for (const k of Object.keys(state)) delete state[k];
+      if (q) q.value = '';
+      apply();
+    });
+    apply();
+  }
+</script>
